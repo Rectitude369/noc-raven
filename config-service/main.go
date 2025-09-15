@@ -486,6 +486,14 @@ func newMux() http.Handler {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	mux.HandleFunc("/api/buffer/status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleBuffer(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	return withCORS(withAuth(mux))
 }
 

@@ -844,7 +844,7 @@ value={config.forwarding?.windows?.host || 'obs.rectitude.net'}
             Port:
             <input
               type="number"
-              value={config.forwarding?.windows?.port || 443}
+              value={config.forwarding?.windows?.port || 8084}
               onChange={(e) => updateConfig('forwarding.windows.port', parseInt(e.target.value))}
               min="1"
               max="65535"
