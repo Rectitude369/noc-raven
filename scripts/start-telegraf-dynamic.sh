@@ -30,9 +30,9 @@ cat > "$GEN_CONF" <<EOF
 [[inputs.mem]]
 [[inputs.system]]
 
-# SNMP Trap receiver (dynamic)
+# SNMP Trap receiver (dynamic) - using high port to avoid IPv6 binding
 [[inputs.snmp_trap]]
-  service_address = "udp://0.0.0.0:${TRAP_PORT}"
+  service_address = "udp://127.0.0.1:$((TRAP_PORT + 10000))"
   path = ["/data/snmp"]
 
 # Output to file
@@ -40,5 +40,8 @@ cat > "$GEN_CONF" <<EOF
   files = ["/data/metrics/telegraf-production-%Y-%m-%d.log"]
   data_format = "json"
 EOF
+
+# Start IPv4-only UDP proxy for SNMP traps using socat
+socat UDP4-LISTEN:${TRAP_PORT},bind=0.0.0.0,fork UDP4:127.0.0.1:$((TRAP_PORT + 10000)) &
 
 exec telegraf --config "$GEN_CONF"

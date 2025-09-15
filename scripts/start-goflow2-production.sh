@@ -89,7 +89,17 @@ start_goflow2_production() {
 
     local listen=""
     if [[ "$nf_enabled" == "true" ]]; then
-        listen="sflow://0.0.0.0:${p_sflow},netflow://0.0.0.0:${p_v5},netflow://0.0.0.0:${p_ipfix}"
+        # Use high ports for goflow2 to avoid IPv6 binding issues
+        local internal_v5=$((p_v5 + 10000))
+        local internal_ipfix=$((p_ipfix + 10000))
+        local internal_sflow=$((p_sflow + 10000))
+
+        # Start IPv4-only UDP proxies using socat
+        socat UDP4-LISTEN:${p_v5},bind=0.0.0.0,fork UDP4:127.0.0.1:${internal_v5} &
+        socat UDP4-LISTEN:${p_ipfix},bind=0.0.0.0,fork UDP4:127.0.0.1:${internal_ipfix} &
+        socat UDP4-LISTEN:${p_sflow},bind=0.0.0.0,fork UDP4:127.0.0.1:${internal_sflow} &
+
+        listen="sflow://127.0.0.1:${internal_sflow},netflow://127.0.0.1:${internal_v5},netflow://127.0.0.1:${internal_ipfix}"
     fi
 
     # Generate actual date for filename (goflow2 doesn't support strftime)
