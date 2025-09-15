@@ -74,11 +74,9 @@ start_goflow2_production() {
         return 1
     fi
     
-    # Check port availability
-    if ! check_port_availability; then
-        log_error "Port availability check failed"
-        return 1
-    fi
+    # Skip port availability check when using socat proxies
+    # (socat will be using the external ports, goflow2 uses high ports)
+    log_info "Using socat IPv4 proxies - skipping external port availability check"
     
 # Build listen string from config
     local cfg=/opt/noc-raven/web/api/config.json
