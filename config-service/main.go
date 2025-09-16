@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -769,7 +770,7 @@ func handleWindows(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(windows)
 }
 
-// getTelemetryCount counts lines in telemetry data files
+// getTelemetryCount counts lines in telemetry data files efficiently
 func getTelemetryCount(dataDir, pattern string) int {
 	count := 0
 
@@ -785,16 +786,45 @@ func getTelemetryCount(dataDir, pattern string) int {
 			continue
 		}
 
-		// Count lines in file (each line typically represents one telemetry record)
-		if data, err := os.ReadFile(file); err == nil {
-			lines := strings.Split(string(data), "\n")
-			// Filter out empty lines
-			for _, line := range lines {
-				if strings.TrimSpace(line) != "" {
-					count++
-				}
-			}
+		// For large files, use efficient line counting without loading entire file into memory
+		if fileCount := countLinesInFile(file); fileCount > 0 {
+			count += fileCount
 		}
+	}
+
+	return count
+}
+
+// countLinesInFile efficiently counts lines in a file without loading it entirely into memory
+func countLinesInFile(filename string) int {
+	file, err := os.Open(filename)
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	count := 0
+	scanner := bufio.NewScanner(file)
+
+	// Use a larger buffer for better performance with large files
+	buf := make([]byte, 64*1024)   // 64KB buffer
+	scanner.Buffer(buf, 1024*1024) // 1MB max token size
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" {
+			count++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		// If scanning fails, try to estimate based on file size
+		if info, statErr := os.Stat(filename); statErr == nil {
+			// Rough estimate: assume average line length of 200 bytes for flow records
+			estimatedLines := int(info.Size() / 200)
+			return estimatedLines
+		}
+		return 0
 	}
 
 	return count
