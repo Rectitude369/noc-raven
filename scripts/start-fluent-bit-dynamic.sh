@@ -44,7 +44,16 @@ EOF
   exec fluent-bit -c "$GEN_CONF"
 fi
 
-# Generate syslog input config
+# Use IPv4-only binding with socat proxy (like goflow2)
+# fluent-bit binds to localhost high port, socat handles external IPv4 traffic
+INTERNAL_PORT=$((11000 + SYS_PORT))
+
+# Start socat IPv4 proxy in background
+echo "Starting IPv4-only socat proxy: $SYS_PORT -> 127.0.0.1:$INTERNAL_PORT"
+socat UDP4-LISTEN:$SYS_PORT,bind=0.0.0.0,fork UDP4:127.0.0.1:$INTERNAL_PORT &
+SOCAT_PID=$!
+
+# Generate syslog input config with localhost binding
 cat > "$GEN_CONF" <<EOF
 [SERVICE]
     Flush         5
@@ -55,8 +64,8 @@ cat > "$GEN_CONF" <<EOF
 [INPUT]
     Name          syslog
     Mode          $PROTO
-    Listen        $BIND_ADDR
-    Port          $SYS_PORT
+    Listen        127.0.0.1
+    Port          $INTERNAL_PORT
     Parser        syslog-rfc3164-custom
 
 # Fallback parser filter to handle cases where the input plugin parser is not applied
@@ -79,5 +88,13 @@ cat > "$GEN_CONF" <<EOF
     Name          stdout
     Match         syslog.*
 EOF
+
+# Cleanup function
+cleanup() {
+    echo "Cleaning up socat proxy (PID: $SOCAT_PID)"
+    kill $SOCAT_PID 2>/dev/null || true
+    exit 0
+}
+trap cleanup TERM INT
 
 exec fluent-bit -c "$GEN_CONF"
