@@ -494,6 +494,15 @@ func newMux() http.Handler {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	// Add telemetry stats endpoint for dashboard
+	mux.HandleFunc("/api/telemetry/stats", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handleTelemetryStats(w, r)
+			return
+		}
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	return withCORS(withAuth(mux))
 }
 
@@ -1054,6 +1063,46 @@ func handleBuffer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = json.NewEncoder(w).Encode(buffer)
+}
+
+// Telemetry stats handler for dashboard
+func handleTelemetryStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get telemetry data counts from actual data files
+	syslogCount := int64(getTelemetryCount("/data/syslog", "production-syslog.log"))
+	flowsCount := int64(getTelemetryCount("/data/flows", "production-flows-*.log"))
+	snmpCount := int64(getTelemetryCount("/data/snmp", "*.log"))
+	windowsCount := int64(getTelemetryCount("/data/vector", "*.log"))
+
+	// Calculate rates (simplified - in production would track over time)
+	flowsPerSecond := flowsCount / 60 // Rough estimate
+	syslogPerMinute := syslogCount / 60
+	snmpPolls := snmpCount / 300 // Every 5 minutes
+
+	// Active devices estimate (based on unique sources)
+	activeDevices := int64(10) // Placeholder - would analyze actual data
+
+	// Data buffer size
+	dataBuffer := "0B"
+	if stat, err := os.Stat("/data"); err == nil {
+		dataBuffer = fmt.Sprintf("%.1fMB", float64(stat.Size())/(1024*1024))
+	}
+
+	telemetryStats := map[string]any{
+		"flowsPerSecond": flowsPerSecond,
+		"syslogMessages": syslogPerMinute,
+		"snmpPolls":      snmpPolls,
+		"activeDevices":  activeDevices,
+		"dataBuffer":     dataBuffer,
+		"windowsEvents":  windowsCount,
+		"totalFlows":     flowsCount,
+		"totalSyslog":    syslogCount,
+		"totalSnmp":      snmpCount,
+		"totalWindows":   windowsCount,
+	}
+
+	_ = json.NewEncoder(w).Encode(telemetryStats)
 }
 
 func withCORS(next http.Handler) http.Handler {
