@@ -81,7 +81,8 @@ cat > "$GEN_CONF" <<EOF
 [OUTPUT]
     Name          file
     Match         syslog.*
-    Path          /data/syslog/production-syslog.log
+    File          /data/syslog/production-syslog.log
+    Format        json_lines
 
 # Debug output to stdout (reduced)
 [OUTPUT]
