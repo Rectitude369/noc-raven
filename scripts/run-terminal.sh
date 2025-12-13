@@ -4,7 +4,7 @@ set -euo pipefail
 # - root user for hostname/timezone, privileged ports
 # - CAP_NET_ADMIN for ip/route changes inside the container namespace
 
-IMAGE="${IMAGE:-noc-raven:test}"
+IMAGE="${IMAGE:-noc-raven:latest}"
 NAME="${NAME:-noc-raven-term}"
 
 # Host bind mounts for persistence

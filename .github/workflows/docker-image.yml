@@ -33,11 +33,11 @@ jobs:
 
       - name: Build image
         run: |
-          docker build -t noc-raven:test .
+          docker build -t noc-raven:latest .
 
       - name: Verify binary presence
         run: |
-          cid=$(docker create noc-raven:test)
+          cid=$(docker create noc-raven:latest)
           docker cp $cid:/opt/noc-raven/bin/config-service ./config-service
           docker rm -v $cid
           test -x ./config-service

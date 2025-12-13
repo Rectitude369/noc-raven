@@ -22,7 +22,7 @@
       "Bash(DOCKER_BUILDKIT=1 docker build -t noc-raven:phase1-test .)",
       "Bash(docker run:*)",
       "Bash(cp:*)",
-      "Bash(DOCKER_BUILDKIT=1 docker build -t noc-raven:test .)",
+      "Bash(DOCKER_BUILDKIT=1 docker build -t noc-raven:latest .)",
       "Bash(docker logs:*)"
     ],
     "deny": []

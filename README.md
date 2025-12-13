@@ -15,7 +15,7 @@ Core services
 
 Quick start
 1) Build the image
-   DOCKER_BUILDKIT=1 docker build -t noc-raven:test .
+   DOCKER_BUILDKIT=1 docker build -t noc-raven:latest .
 
 2) Terminal mode (first-time configuration)
    ./scripts/run-terminal.sh
@@ -38,7 +38,7 @@ Quick start
      -p 1514:1514/udp -p 2055:2055/udp -p 4739:4739/udp -p 6343:6343/udp \
      -p 162:162/udp \
      -v noc-raven-data:/data -v noc-raven-config:/config \
-     noc-raven:test
+     noc-raven:latest
 
 Default ports (inside the container)
 - Web UI: 8080/tcp (expose on host)
@@ -110,7 +110,7 @@ docker run -d --name noc-raven \
   -p 6343:6343/udp \
   -p 162:162/udp \
   --cap-add NET_ADMIN \
-  noc-raven:production
+  noc-raven:latest
 ```
 
 **Health Check:**

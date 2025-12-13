@@ -28,7 +28,7 @@ NoC Raven is a high-performance, turn-key telemetry collection and forwarding ap
 ### Docker Operations
 ```bash
 # Build container image
-DOCKER_BUILDKIT=1 docker build -t noc-raven:test .
+DOCKER_BUILDKIT=1 docker build -t noc-raven:latest .
 
 # Terminal mode (first-time setup)
 ./scripts/run-terminal.sh

@@ -2,7 +2,7 @@
 set -euo pipefail
 # Simple web deployment without VPN complications
 
-IMAGE="${IMAGE:-noc-raven:test}"
+IMAGE="${IMAGE:-noc-raven:latest}"
 NAME="${NAME:-noc-raven-simple}"
 
 CONF_DIR="${CONF_DIR:-$PWD/.noc-raven-config}"

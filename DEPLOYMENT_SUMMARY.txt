@@ -11,7 +11,7 @@ DEPLOYMENT RESULTS
 ================================================================================
 
 1. DOCKER BUILD & DEPLOYMENT
-   ✅ Image: noc-raven:test
+   ✅ Image: noc-raven:latest
    ✅ Build Time: < 2 minutes
    ✅ Container ID: 5cfac496a079
    ✅ Status: Running

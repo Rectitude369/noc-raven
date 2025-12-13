@@ -3,7 +3,7 @@ set -euo pipefail
 # Run NoC Raven in Web mode (auto-detect DHCP) with healthy defaults
 # This script uses non-root user by default; override with RUN_AS_ROOT=1 to run as root
 
-IMAGE="${IMAGE:-noc-raven:test}"
+IMAGE="${IMAGE:-noc-raven:latest}"
 NAME="${NAME:-noc-raven-web}"
 RUN_AS_ROOT="${RUN_AS_ROOT:-0}"
 

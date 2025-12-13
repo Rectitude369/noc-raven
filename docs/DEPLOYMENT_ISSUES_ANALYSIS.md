@@ -47,13 +47,13 @@
 ### Container Build Validation
 ```bash
 # 1. Build with explicit platform targeting
-DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t noc-raven:test .
+DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -t noc-raven:latest .
 
 # 2. Verify critical dependencies
-docker run --rm noc-raven:test sh -c "which openssl && which openvpn && which expect"
+docker run --rm noc-raven:latest sh -c "which openssl && which openvpn && which expect"
 
 # 3. Test web interface build
-docker run --rm noc-raven:test sh -c "ls -la /opt/noc-raven/web/index.html"
+docker run --rm noc-raven:latest sh -c "ls -la /opt/noc-raven/web/index.html"
 ```
 
 ### Windows Docker Desktop Specific Tests
@@ -63,7 +63,7 @@ docker run -d --name noc-raven-test \
   -p 9080:8080 -p 8084:8084 \
   -v "%cd%\.noc-raven-config:/config" \
   -v "%cd%\.noc-raven-data:/data" \
-  noc-raven:test --mode=web
+  noc-raven:latest --mode=web
 
 # 2. Validate API connectivity
 curl http://localhost:9080/health
@@ -79,7 +79,7 @@ docker logs noc-raven-test
 docker run -it --name noc-raven-term \
   --cap-add=NET_ADMIN \
   -v "%cd%\.noc-raven-config:/config" \
-  noc-raven:test --mode=terminal
+  noc-raven:latest --mode=terminal
 
 # 2. Validate configuration persistence
 # Should create files in .noc-raven-config directory
@@ -100,7 +100,7 @@ docker run -d --name noc-raven \
   -v noc-raven-config:/config \
   -v noc-raven-logs:/var/log/noc-raven \
   --restart unless-stopped \
-  noc-raven:test --mode=web
+  noc-raven:latest --mode=web
 ```
 
 **Terminal Mode (Manual Configuration)**:
@@ -113,7 +113,7 @@ docker run -it --name noc-raven-setup \
   -v noc-raven-data:/data \
   -v noc-raven-config:/config \
   -v noc-raven-logs:/var/log/noc-raven \
-  noc-raven:test --mode=terminal
+  noc-raven:latest --mode=terminal
 ```
 
 ### VPN Configuration Steps

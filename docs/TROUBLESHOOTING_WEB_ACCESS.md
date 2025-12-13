@@ -108,7 +108,7 @@ docker exec noc-raven-web cat /opt/noc-raven/logs/nginx.error.log
 lsof -i :9080
 
 # Use different port
-docker run ... -p 9081:8080 ... noc-raven:test
+docker run ... -p 9081:8080 ... noc-raven:latest
 # Then access: http://localhost:9081
 ```
 
@@ -137,7 +137,7 @@ docker stop noc-raven-web && docker rm noc-raven-web
 # Try with host networking (Linux/macOS only)
 docker run -d --name noc-raven-host \
   --network host \
-  noc-raven:test --mode=web
+  noc-raven:latest --mode=web
 
 # Then access: http://localhost:8080
 ```
@@ -184,7 +184,7 @@ docker exec noc-raven-web netstat -tlnp | grep -E "(8080|5004)"
 # Quick test with direct port 8080
 docker run -d --name noc-raven-direct \
   -p 8080:8080 \
-  noc-raven:test --mode=web
+  noc-raven:latest --mode=web
 
 # Access: http://localhost:8080
 ```

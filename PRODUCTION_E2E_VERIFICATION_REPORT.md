@@ -28,7 +28,7 @@ The NoC Raven telemetry collection and forwarding appliance has been **fully dep
 ### Build Status: ✅ SUCCESS
 
 ```
-Image: noc-raven:test
+Image: noc-raven:latest
 Build Tool: Docker BuildKit
 Build Time: < 2 minutes
 Final Size: Optimized Alpine-based image
