@@ -10,7 +10,7 @@ const NetFlow = () => {
     try {
       await restartService('goflow2');
     } catch (err) {
-      console.error('Failed to restart Flow service:', err);
+      // Error handled by restartService toast notification
     }
   };
 

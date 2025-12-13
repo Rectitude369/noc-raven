@@ -200,6 +200,13 @@ COPY config/ ${NOC_RAVEN_HOME}/config/
 COPY scripts/ ${NOC_RAVEN_HOME}/scripts/
 COPY services/ /etc/supervisor/conf.d/
 
+# Explicitly copy essential config files to ensure they're present
+COPY config/parsers.conf ${NOC_RAVEN_HOME}/config/
+COPY config/fluent-bit.conf ${NOC_RAVEN_HOME}/config/
+COPY config/vector-minimal.toml ${NOC_RAVEN_HOME}/config/
+COPY config/goflow2.yml ${NOC_RAVEN_HOME}/config/
+COPY config/telegraf.conf ${NOC_RAVEN_HOME}/config/
+
 # Copy startup and utility scripts
 COPY scripts/entrypoint.sh ${NOC_RAVEN_HOME}/bin/
 COPY scripts/boot-manager.sh ${NOC_RAVEN_HOME}/bin/

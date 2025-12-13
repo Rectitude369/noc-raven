@@ -16,7 +16,6 @@ class ApiService {
       }
       return await response.json();
     } catch (error) {
-      console.error('API Error:', error);
       this.showToast('error', `API Error: ${error.message}`);
       return null;
     }
@@ -38,7 +37,6 @@ class ApiService {
       
       return await response.json();
     } catch (error) {
-      console.error('API Error:', error);
       this.showToast('error', `API Error: ${error.message}`);
       throw error;
     }

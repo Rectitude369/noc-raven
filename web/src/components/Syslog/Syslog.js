@@ -10,7 +10,7 @@ const Syslog = () => {
     try {
       await restartService('fluent-bit');
     } catch (err) {
-      console.error('Failed to restart Syslog service:', err);
+      // Error handled by restartService toast notification
     }
   };
 

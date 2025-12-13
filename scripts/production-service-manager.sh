@@ -18,6 +18,7 @@ readonly PORT_CHECK_TIMEOUT=30
 # Service definitions with startup order and health checks
 declare -A SERVICES=(
     ["http-api"]="$NOC_RAVEN_HOME/bin/config-service"
+    ["buffer-manager"]="$NOC_RAVEN_HOME/bin/buffer-manager"
     ["nginx"]="nginx -g 'daemon off;'"
     ["vector"]="env VECTOR_LOG=warn vector --config-toml $NOC_RAVEN_HOME/config/vector-minimal.toml"
     ["fluent-bit"]="$NOC_RAVEN_HOME/scripts/start-fluent-bit-dynamic.sh"
@@ -26,11 +27,13 @@ declare -A SERVICES=(
 )
 
 # Service startup order (critical services first)
-readonly SERVICE_ORDER=("http-api" "nginx" "fluent-bit" "goflow2" "telegraf" "vector")
+# buffer-manager MUST start before collectors (fluent-bit, goflow2, telegraf, vector)
+readonly SERVICE_ORDER=("http-api" "buffer-manager" "nginx" "fluent-bit" "goflow2" "telegraf" "vector")
 
 # Port mappings for health checks
 declare -A SERVICE_PORTS=(
     ["http-api"]="5004:tcp"
+    ["buffer-manager"]="5005:tcp"
     ["nginx"]="8080:tcp"
     ["vector"]="8084:tcp"
     ["fluent-bit"]=""
@@ -41,6 +44,7 @@ declare -A SERVICE_PORTS=(
 # Health check URLs
 declare -A HEALTH_URLS=(
     ["http-api"]="http://localhost:5004/health"
+    ["buffer-manager"]="http://localhost:5005/api/v1/status"
     ["nginx"]="http://localhost:8080"
     ["vector"]="http://localhost:8084/health"
 )

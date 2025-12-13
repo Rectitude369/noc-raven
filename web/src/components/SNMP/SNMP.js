@@ -10,7 +10,7 @@ const SNMP = () => {
     try {
       await restartService('telegraf');
     } catch (err) {
-      console.error('Failed to restart SNMP service:', err);
+      // Error handled by restartService toast notification
     }
   };
 

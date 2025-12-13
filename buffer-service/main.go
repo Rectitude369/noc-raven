@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -343,37 +344,135 @@ func (bm *BufferManager) startForwardingWorker() {
 	}
 }
 
-// forwardRecord sends a single record to the remote endpoint
+// forwardRecord sends a single record to the remote endpoint using appropriate protocol
 func (bm *BufferManager) forwardRecord(record TelemetryRecord) error {
-	if bm.config.ForwardingURL == "" {
-		return fmt.Errorf("forwarding URL not configured")
+	// Route to appropriate forwarding method based on data type and service
+	switch record.DataType {
+	case "syslog":
+		return bm.forwardSyslogUDP(record)
+	case "netflow":
+		return bm.forwardNetFlowUDP(record)
+	case "snmp":
+		return bm.forwardSNMPUDP(record)
+	case "windows_events":
+		return bm.forwardWindowsHTTP(record)
+	case "metrics":
+		return bm.forwardMetricsHTTP(record)
+	default:
+		logger.WithFields(logrus.Fields{
+			"data_type": record.DataType,
+			"service":   record.Service,
+		}).Warn("Unknown data type, skipping forward")
+		return nil
+	}
+}
+
+// forwardSyslogUDP forwards syslog data via UDP to obs.rectitude.net:1514
+func (bm *BufferManager) forwardSyslogUDP(record TelemetryRecord) error {
+	conn, err := net.Dial("udp", "obs.rectitude.net:1514")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// Set write deadline
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	
+	// Send raw JSON data
+	_, err = conn.Write([]byte(record.JsonData))
+	return err
+}
+
+// forwardNetFlowUDP forwards NetFlow/sFlow/IPFIX data via UDP
+func (bm *BufferManager) forwardNetFlowUDP(record TelemetryRecord) error {
+	// Parse JSON to determine flow type and route to appropriate port
+	var flowData map[string]interface{}
+	if err := json.Unmarshal([]byte(record.JsonData), &flowData); err != nil {
+		return err
 	}
 
+	port := "2055" // Default NetFlow port
+	if flowType, ok := flowData["flow_type"].(string); ok {
+		switch flowType {
+		case "sflow":
+			port = "6343"
+		case "ipfix":
+			port = "4739"
+		}
+	}
+
+	conn, err := net.Dial("udp", fmt.Sprintf("obs.rectitude.net:%s", port))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_, err = conn.Write([]byte(record.JsonData))
+	return err
+}
+
+// forwardSNMPUDP forwards SNMP trap data via UDP to port 162
+func (bm *BufferManager) forwardSNMPUDP(record TelemetryRecord) error {
+	conn, err := net.Dial("udp", "obs.rectitude.net:162")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_, err = conn.Write([]byte(record.JsonData))
+	return err
+}
+
+// forwardWindowsHTTP forwards Windows Events via HTTP to Vector endpoint
+func (bm *BufferManager) forwardWindowsHTTP(record TelemetryRecord) error {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// Prepare payload
-	payload := map[string]interface{}{
-		"service":   record.Service,
-		"timestamp": record.Timestamp,
-		"data_type": record.DataType,
-		"source_ip": record.SourceIP,
-		"data":      json.RawMessage(record.JsonData),
-	}
-
-	jsonData, err := json.Marshal([]interface{}{payload})
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", bm.config.ForwardingURL, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", "http://obs.rectitude.net:8084/", bytes.NewBufferString(record.JsonData))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "noc-raven-buffer-manager/1.0")
+	req.Header.Set("User-Agent", "noc-raven/2.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// forwardMetricsHTTP forwards metrics to InfluxDB
+func (bm *BufferManager) forwardMetricsHTTP(record TelemetryRecord) error {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// InfluxDB write endpoint
+	url := "http://obs.rectitude.net:8086/api/v2/write?org=rectitude&bucket=r369"
+	req, err := http.NewRequest("POST", url, bytes.NewBufferString(record.JsonData))
+	if err != nil {
+		return err
+	}
+
+	// Add InfluxDB auth token from environment
+	token := os.Getenv("INFLUXDB_TOKEN")
+	if token == "" {
+		token = "4DhBMQYYZZRlI_ER8WyVusydNbTC8JTDjvf8vD-MJIgfGdtXdF0cJB6DwjyjJ7hZxtpLtvqwJ7gAfCCHFXh5ow=="
+	}
+
+	req.Header.Set("Authorization", "Token "+token)
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -834,6 +933,86 @@ func (bm *BufferManager) handleBufferStats(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(stats)
 }
 
+// Generic ingestion handler
+func (bm *BufferManager) ingestData(w http.ResponseWriter, r *http.Request, service string, dataType string) {
+	var payload interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Convert payload to JSON
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("JSON marshal error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Create telemetry record
+	record := TelemetryRecord{
+		Service:   service,
+		Timestamp: time.Now().Unix(),
+		DataType:  dataType,
+		DataSize:  int64(len(jsonData)),
+		JsonData:  string(jsonData),
+		SourceIP:  r.RemoteAddr,
+		Forwarded: 0,
+	}
+
+	// Try to forward immediately via channel if VPN failover is enabled
+	if bm.config.VPNFailoverEnabled {
+		select {
+		case bm.forwardChan <- record:
+			// Record sent to forwarding worker
+		default:
+			// Channel full, store in buffer
+			if err := bm.StoreRecord(record); err != nil {
+				http.Error(w, fmt.Sprintf("Storage error: %v", err), http.StatusInternalServerError)
+				return
+			}
+		}
+	} else {
+		// Store directly in buffer
+		if err := bm.StoreRecord(record); err != nil {
+			http.Error(w, fmt.Sprintf("Storage error: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "success",
+		"service":   service,
+		"data_type": dataType,
+		"timestamp": time.Now().Unix(),
+	})
+}
+
+// handleSyslogIngest handles syslog data from Fluent Bit
+func (bm *BufferManager) handleSyslogIngest(w http.ResponseWriter, r *http.Request) {
+	bm.ingestData(w, r, "fluent-bit", "syslog")
+}
+
+// handleNetFlowIngest handles NetFlow/sFlow/IPFIX data from GoFlow2
+func (bm *BufferManager) handleNetFlowIngest(w http.ResponseWriter, r *http.Request) {
+	bm.ingestData(w, r, "goflow2", "netflow")
+}
+
+// handleSNMPIngest handles SNMP trap data from Telegraf
+func (bm *BufferManager) handleSNMPIngest(w http.ResponseWriter, r *http.Request) {
+	bm.ingestData(w, r, "telegraf", "snmp")
+}
+
+// handleMetricsIngest handles metrics data from Telegraf
+func (bm *BufferManager) handleMetricsIngest(w http.ResponseWriter, r *http.Request) {
+	bm.ingestData(w, r, "telegraf", "metrics")
+}
+
+// handleWindowsIngest handles Windows Events data from Vector
+func (bm *BufferManager) handleWindowsIngest(w http.ResponseWriter, r *http.Request) {
+	bm.ingestData(w, r, "vector", "windows_events")
+}
+
 // handleIngest handles telemetry data ingestion from Vector
 func (bm *BufferManager) handleIngest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -985,6 +1164,16 @@ func main() {
 	api.HandleFunc("/cleanup", bm.handleCleanup).Methods("POST")
 	api.HandleFunc("/config", bm.handleConfig).Methods("GET", "POST")
 	api.HandleFunc("/ingest", bm.handleIngest).Methods("POST")
+
+	// V1 API - Per-service ingestion endpoints
+	v1 := r.PathPrefix("/api/v1").Subrouter()
+	v1.HandleFunc("/ingest/syslog", bm.handleSyslogIngest).Methods("POST")
+	v1.HandleFunc("/ingest/netflow", bm.handleNetFlowIngest).Methods("POST")
+	v1.HandleFunc("/ingest/snmp", bm.handleSNMPIngest).Methods("POST")
+	v1.HandleFunc("/ingest/metrics", bm.handleMetricsIngest).Methods("POST")
+	v1.HandleFunc("/ingest/windows", bm.handleWindowsIngest).Methods("POST")
+	v1.HandleFunc("/status", bm.handleStatus).Methods("GET")
+	v1.HandleFunc("/buffer/stats", bm.handleBufferStats).Methods("GET")
 
 	// VPN and forwarding operations
 	api.HandleFunc("/vpn/status", bm.handleVPNStatus).Methods("GET")

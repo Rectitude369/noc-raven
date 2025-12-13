@@ -294,11 +294,11 @@ source = """
 # SINKS
 # =============================================================================
 
-# Buffer Manager output for telemetry data buffering
+# Buffer Manager output for Windows Events (updated to use v1 API)
 [sinks.buffer_manager]
 type = "http"
-inputs = ["windows_events_processor", "syslog_parser"]
-uri = "http://127.0.0.1:5005/api/buffer/ingest"
+inputs = ["windows_processor"]
+uri = "http://127.0.0.1:5005/api/v1/ingest/windows"
 method = "post"
 compression = "gzip"
 
@@ -307,8 +307,12 @@ codec = "json"
 
 [sinks.buffer_manager.request]
 timeout_secs = 5
-retry_attempts = 3
+retry_attempts = 0  # Buffer service handles retry logic
 retry_max_duration_secs = 10
+
+[sinks.buffer_manager.request.headers]
+Content-Type = "application/json"
+User-Agent = "vector/noc-raven-2.0"
 
 # File output for searchable logs (replaces Elasticsearch) - WITH SIZE LIMITS
 [sinks.logs_file]

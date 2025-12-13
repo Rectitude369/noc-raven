@@ -67,6 +67,10 @@ cat > "$GEN_CONF" <<EOF
     Listen        127.0.0.1
     Port          $INTERNAL_PORT
     Parser        syslog-rfc3164-custom
+    Buffer_Chunk_Size 32KB
+    Buffer_Max_Size   2MB
+    Tag           syslog.udp
+    Mem_Buf_Limit 100MB
 
 # Fallback parser filter to handle cases where the input plugin parser is not applied
 [FILTER]
@@ -77,17 +81,24 @@ cat > "$GEN_CONF" <<EOF
     Reserve_Data  On
     Preserve_Key  On
 
+# Send to buffer service for forwarding
+[OUTPUT]
+    Name          http
+    Match         syslog.*
+    Host          127.0.0.1
+    Port          5005
+    URI           /api/v1/ingest/syslog
+    Format        json
+    json_date_key timestamp
+    json_date_format iso8601
+    Retry_Limit   False
+
 # Local file storage for telemetry data
 [OUTPUT]
     Name          file
     Match         syslog.*
     Path          /data/syslog/
     File          production-syslog.log
-
-# Debug output to stdout (reduced)
-[OUTPUT]
-    Name          stdout
-    Match         syslog.*
 EOF
 
 # Cleanup function

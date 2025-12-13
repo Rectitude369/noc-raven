@@ -29,7 +29,6 @@ const [activeTab, setActiveTab] = useState(initialTab || 'collection');
       setConfig(configData);
     } catch (err) {
       setError(`Failed to load configuration: ${err.message}`);
-      console.error('Configuration load error:', err);
     } finally {
       setLoading(false);
     }
@@ -71,7 +70,6 @@ setSuccess('✅ Configuration saved and applied successfully!');
     } catch (err) {
 setError(`❌ Failed to save configuration: ${err.message}`);
       window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: `Save failed: ${err.message}` } }));
-      console.error('Configuration save error:', err);
     } finally {
       setSaving(false);
     }
@@ -105,7 +103,6 @@ setSuccess(`✅ Service ${serviceName} restarted successfully!`);
     } catch (err) {
 setError(`❌ Failed to restart ${serviceName}: ${err.message}`);
       window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: `Restart ${serviceName} failed: ${err.message}` } }));
-      console.error('Service restart error:', err);
     } finally {
       setRestarting(prev => ({ ...prev, [serviceName]: false }));
     }

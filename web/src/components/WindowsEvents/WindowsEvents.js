@@ -10,7 +10,7 @@ const WindowsEvents = () => {
     try {
       await restartService('vector');
     } catch (err) {
-      console.error('Failed to restart Windows Events service:', err);
+      // Error handled by restartService toast notification
     }
   };
 

@@ -10,7 +10,7 @@ const BufferStatus = () => {
     try {
       await restartService('buffer-service');
     } catch (err) {
-      console.error('Failed to restart buffer service:', err);
+      // Error handled by restartService toast notification
     }
   };
 

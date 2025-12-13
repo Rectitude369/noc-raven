@@ -189,9 +189,36 @@ pipeline:
 # OUTPUT CONFIGURATION
 # =============================================================================
 outputs:
-  # Primary output to remote GoFlow2 instance
-  remote_goflow:
+  # Primary output to Buffer Service (replaces direct remote output)
+  buffer_service:
     enabled: true
+    type: "http"
+    url: "http://127.0.0.1:5005/api/v1/ingest/netflow"
+    
+    # HTTP settings
+    method: "POST"
+    headers:
+      Content-Type: "application/json"
+      User-Agent: "goflow2/noc-raven-2.0"
+    
+    # Connection settings (no retry - buffer service handles offline)
+    connection:
+      timeout: 10s
+      retry_attempts: 0
+      keep_alive: true
+      
+    # Batching for efficiency
+    batch:
+      enabled: true
+      size: 100
+      timeout: 5s
+      
+    # Export format
+    format: "json"
+    
+  # Legacy remote output - DISABLED (now handled by buffer service)
+  remote_goflow:
+    enabled: false
     type: "netflow_v9"
     target: "obs.rectitude.net:2055"
     
@@ -212,9 +239,9 @@ outputs:
     # Export template refresh
     template_refresh: 600s
     
-  # InfluxDB export for metrics
+  # InfluxDB export - DISABLED (now handled by buffer service)
   influxdb:
-    enabled: true
+    enabled: false
     url: "http://obs.rectitude.net:8086"
     database: "r369"
     username: "admin"

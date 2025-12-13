@@ -90,17 +90,20 @@ export const useConfig = () => {
  */
 export const useServiceManager = () => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const restartService = useCallback(async (serviceName) => {
     try {
       setLoading(true);
+      setError(null);
       await apiService.restartService(serviceName);
     } catch (err) {
+      setError(err.message);
       throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { restartService, loading };
+  return { restartService, loading, error };
 };
