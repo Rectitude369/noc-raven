@@ -483,6 +483,12 @@ start_services() {
     else
         log_info "Starting services with production service manager v2.0 (background)..."
         # Make production service manager executable
+        # Start port forwarding FIRST (before other services)
+        log_info "Starting port forwarding services..."
+        chmod +x "$NOC_RAVEN_HOME/scripts/start-port-forwarding.sh" 2>/dev/null || true
+        "$NOC_RAVEN_HOME/scripts/start-port-forwarding.sh" &
+        sleep 3
+
         chmod +x "$NOC_RAVEN_HOME/scripts/production-service-manager.sh" 2>/dev/null || true
         chmod +x "$NOC_RAVEN_HOME/scripts/start-goflow2-production.sh" 2>/dev/null || true
         
